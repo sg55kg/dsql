@@ -7,6 +7,18 @@
 #include <stdio.h>
 #include "token.h"
 
+/// Current type of SQL command the parser is handling
+enum ParserState {
+    PS_NONE,
+    PS_USING,
+    PS_CREATE,
+    PS_SUDI, // Select, update, delete, insert TODO might break up
+    PS_FILTER,
+    PS_ORDER,
+    PS_GROUP,
+    PS_JOIN,
+};
+
 struct Token* incr_tokens(struct Token* tokens, enum TokenType type, char* val);
 struct Token* parse_to_tokens(FILE *file, size_t file_size);
 

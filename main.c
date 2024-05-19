@@ -8,14 +8,6 @@
 #include "parser.h"
 #include "token.h"
 
-/*
- * Possible instructions:
- * SELECT * FROM <table> <alias> WHERE <alias>.a = val;
- * UPDATE <table> <alias> (colA, colB) SET (valA, valB) WHERE <alias>.colC = valC;
- * DELETE FROM <table> <alias> WHERE <alias>.a = val;
- * INSERT INTO <table> (colA, colB, colC) VALUES (a, b, c);
- */
-
 int main(const int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <path_to_sql_file>\n", argv[0]);
