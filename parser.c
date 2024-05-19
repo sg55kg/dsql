@@ -24,7 +24,7 @@ struct Token* incr_tokens(struct Token* tokens, const enum TokenType type, char*
     return token;
 }
 
-struct Token* parse_state_none(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_none(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (strcmp(curr_val, ";") == 0) { // TODO handle cases like " ;" trim string
         tokens = incr_tokens(tokens, SEMI, curr_val);
     } else if (ch == ' ') {
@@ -40,19 +40,21 @@ struct Token* parse_state_none(struct Token* tokens, const char ch, char* curr_v
         } else if (strcmp(curr_val, "DELETE") == 0) {
             tokens = incr_tokens(tokens, DELETE_COMMAND, curr_val);
             *state = PS_SUDI;
-        } else if (strcmp(curr_val, "INSERT INTO") == 0) {
+        } else if (strcmp(curr_val, "INSERTINTO") == 0) {
             tokens = incr_tokens(tokens, INSERT_COMMAND, curr_val);
             *state = PS_SUDI;
         } else if (strcmp(curr_val, "CREATE") == 0) {
             tokens = incr_tokens(tokens, CREATE_COMMAND, curr_val);
             *state = PS_CREATE;
         }
+    } else if (strcmp(curr_val, "\n") == 0) {
+        tokens = incr_tokens(tokens, NEW_LINE, curr_val);
     }
 
     return tokens;
 }
 
-struct Token* parse_state_using(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_using(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';' || ch == ' ' || ch == '\n') {
         tokens = incr_tokens(tokens, SCHEMA_NAME, curr_val);
         *state = PS_NONE;
@@ -63,10 +65,14 @@ struct Token* parse_state_using(struct Token* tokens, const char ch, char* curr_
     return tokens;
 }
 
-struct Token* parse_state_sudi(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_sudi(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     } else if (tokens->type == SELECT_COMMAND) {
+        if (ch == ' ' && strlen(curr_val) > 0) {
+            tokens = incr_tokens(tokens, COLUMNS, curr_val);
+        }
+    } else if (tokens->type == INSERT_COMMAND) {
         if (ch == ' ' && strlen(curr_val) > 0) {
             tokens = incr_tokens(tokens, COLUMNS, curr_val);
         }
@@ -83,12 +89,12 @@ struct Token* parse_state_sudi(struct Token* tokens, const char ch, char* curr_v
             if (strcmp(curr_val, "WHERE") == 0) {
                 tokens = incr_tokens(tokens, FILTER_COMMAND, curr_val);
                 *state = PS_FILTER;
-            } else if (strcmp(curr_val, "ORDER BY") == 0) {
+            } else if (strcmp(curr_val, "ORDERBY") == 0) {
                 tokens = incr_tokens(tokens, ORDER_COMMAND, curr_val);
                 *state = PS_ORDER;
             } else if (strcmp(curr_val, "ORDER") == 0) {
                 // ignore
-            } else if (strcmp(curr_val, "GROUP BY") == 0) {
+            } else if (strcmp(curr_val, "GROUPBY") == 0) {
                 tokens = incr_tokens(tokens, GROUP_COMMAND, curr_val);
                 *state = PS_GROUP;
             } else if (strcmp(curr_val, "GROUP") == 0) {
@@ -113,7 +119,50 @@ struct Token* parse_state_sudi(struct Token* tokens, const char ch, char* curr_v
     return tokens;
 }
 
-struct Token* parse_state_create(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_create(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+    if (ch == ';') {
+        *state = PS_NONE;
+        if (tokens->type == COLUMN_NAME && curr_val[strlen(curr_val)-1] == ')') {
+            tokens = incr_tokens(tokens, CREATE_DEFINITION, curr_val);
+        }
+    } else if (ch == ' ') {
+        if (tokens->type == CREATE_COMMAND) {
+            if (strcmp(curr_val, "DATABASE") == 0) {
+                tokens = incr_tokens(tokens, CREATE_TYPE_DATABASE, curr_val);
+            } else if (strcmp(curr_val, "SCHEMA") == 0) {
+                tokens = incr_tokens(tokens, CREATE_TYPE_SCHEMA, curr_val);
+            } else if (strcmp(curr_val, "TABLE") == 0) {
+                tokens = incr_tokens(tokens, CREATE_TYPE_TABLE, curr_val);
+            }
+        } else if (tokens->type == CREATE_TYPE_DATABASE) {
+            tokens = incr_tokens(tokens, DATABASE_NAME, curr_val);
+        } else if (tokens->type == CREATE_TYPE_SCHEMA) {
+            tokens = incr_tokens(tokens, SCHEMA_NAME, curr_val);
+        } else if (tokens->type == CREATE_TYPE_TABLE) {
+            tokens = incr_tokens(tokens, TABLE_NAME, curr_val);
+        } else if (tokens->type == CREATE_DEFINITION) {
+            tokens = incr_tokens(tokens, COLUMN_DATA_TYPE, curr_val);
+        } else if (tokens->type == COLUMN_DATA_TYPE) {
+            tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
+        } else if (tokens->type == COLUMN_NAME && strcmp(curr_val, ",") == 0) {
+            tokens = incr_tokens(tokens, COLUMN_SEPERATOR, curr_val);
+        } else if (tokens->type == COLUMN_NAME && curr_val[strlen(curr_val)-1] == ')') {
+            tokens = incr_tokens(tokens, CREATE_DEFINITION, curr_val);
+        } else if (tokens->type == COLUMN_SEPERATOR) {
+            tokens = incr_tokens(tokens, COLUMN_DATA_TYPE, curr_val);
+        }
+    } else if (ch == ',' && tokens->type == COLUMN_DATA_TYPE) {
+        tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
+    } else if (tokens->type == TABLE_NAME && strcmp(curr_val, "(") == 0) {
+        tokens = incr_tokens(tokens, CREATE_DEFINITION, curr_val);
+    } else if (tokens->type == COLUMN_DATA_TYPE && ch == ')') {
+        tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
+    }
+
+    return tokens;
+}
+
+static struct Token* parse_state_filter(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     }
@@ -121,7 +170,7 @@ struct Token* parse_state_create(struct Token* tokens, const char ch, char* curr
     return tokens;
 }
 
-struct Token* parse_state_filter(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_order(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     }
@@ -129,7 +178,7 @@ struct Token* parse_state_filter(struct Token* tokens, const char ch, char* curr
     return tokens;
 }
 
-struct Token* parse_state_order(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_group(struct Token * tokens, const char ch, char * curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     }
@@ -137,15 +186,7 @@ struct Token* parse_state_order(struct Token* tokens, const char ch, char* curr_
     return tokens;
 }
 
-struct Token* parse_state_group(struct Token * tokens, const char ch, char * curr_val, enum ParserState* state) {
-    if (ch == ';') {
-        *state = PS_NONE;
-    }
-
-    return tokens;
-}
-
-struct Token* parse_state_join(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_join(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     }
@@ -206,7 +247,7 @@ struct Token* parse_to_tokens(FILE *file, const size_t file_size) {
             return NULL;
         }
 
-        if (ch != ' ') {
+        if (ch != ' ' && ch != '.') {
             const size_t len = strlen(curr_val);
             curr_val[len] = ch;
             curr_val[len+1] = '\0';

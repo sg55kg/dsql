@@ -25,6 +25,7 @@ enum TokenType {
     TABLE_ALIAS, // any string
     COLUMN_DATA_TYPE, // INT (id), VARCHAR(20) (first_name)
     COLUMN_NAME, // (INT) id, (VARCHAR(20)) first_name
+    COLUMN_SEPERATOR, // ,
     PRIMARY_KEY, // PRIMARY KEY
     PRIMARY_KEY_VALUE, // (PRIMARY KEY) (id)
     FOREIGN_KEY, // FOREIGN KEY
