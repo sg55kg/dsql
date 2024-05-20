@@ -33,16 +33,16 @@ static struct Token* parse_state_none(struct Token* tokens, const char ch, char*
             *state = PS_USING;
         } else if (strcmp(curr_val, "SELECT") == 0) {
             tokens = incr_tokens(tokens, SELECT_COMMAND, curr_val);
-            *state = PS_SUDI;
+            *state = PS_SUD;
         } else if (strcmp(curr_val, "UPDATE") == 0) {
             tokens = incr_tokens(tokens, UPDATE_COMMAND, curr_val);
-            *state = PS_SUDI;
+            *state = PS_SUD;
         } else if (strcmp(curr_val, "DELETE") == 0) {
             tokens = incr_tokens(tokens, DELETE_COMMAND, curr_val);
-            *state = PS_SUDI;
-        } else if (strcmp(curr_val, "INSERTINTO") == 0) {
+            *state = PS_SUD;
+        } else if (strcmp(curr_val, "INSERT") == 0) {
             tokens = incr_tokens(tokens, INSERT_COMMAND, curr_val);
-            *state = PS_SUDI;
+            *state = PS_INSERT;
         } else if (strcmp(curr_val, "CREATE") == 0) {
             tokens = incr_tokens(tokens, CREATE_COMMAND, curr_val);
             *state = PS_CREATE;
@@ -65,14 +65,10 @@ static struct Token* parse_state_using(struct Token* tokens, const char ch, char
     return tokens;
 }
 
-static struct Token* parse_state_sudi(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+static struct Token* parse_state_sud(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
     } else if (tokens->type == SELECT_COMMAND) {
-        if (ch == ' ' && strlen(curr_val) > 0) {
-            tokens = incr_tokens(tokens, COLUMNS, curr_val);
-        }
-    } else if (tokens->type == INSERT_COMMAND) {
         if (ch == ' ' && strlen(curr_val) > 0) {
             tokens = incr_tokens(tokens, COLUMNS, curr_val);
         }
@@ -119,11 +115,57 @@ static struct Token* parse_state_sudi(struct Token* tokens, const char ch, char*
     return tokens;
 }
 
+static struct Token* parse_state_insert(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
+    if (ch == ';') { // TODO this is still breaking with multiple insert values comma separated
+        *state = PS_NONE;
+    }  else if (strcmp(curr_val, ",") == 0) {
+        tokens = incr_tokens(tokens, SEPERATOR, curr_val);
+    } else if (tokens->type == INSERT_COMMAND) {
+        if (strcmp(curr_val, "(") == 0) {
+            tokens = incr_tokens(tokens, INSERT_DEFINITION, curr_val);
+        }
+    } else if (tokens->type == INSERT_VALUES) {
+        if (strcmp(curr_val, "(") == 0) {
+            tokens = incr_tokens(tokens, INSERT_VALUES_GROUP, curr_val);
+        }
+    } else if (ch == ',') {
+        if (tokens->type == INSERT_DEFINITION || tokens->prev->type == COLUMN_NAME) {
+            tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
+        } else if (tokens->prev->type == INSERT_VALUE || tokens->type == INSERT_VALUES_GROUP) {
+            tokens = incr_tokens(tokens, INSERT_VALUE, curr_val);
+        }
+    } else if (ch == ')') {
+        if (tokens->prev->type == COLUMN_NAME) {
+            tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
+        } else if (tokens->prev->type == INSERT_VALUE) {
+            tokens = incr_tokens(tokens, INSERT_VALUE, curr_val);
+        }
+    } else if (strcmp(curr_val, ")") == 0) {
+        if (tokens->type == INSERT_VALUE) {
+            tokens = incr_tokens(tokens, INSERT_VALUES_GROUP, curr_val);
+        } else if (tokens->type == COLUMN_NAME) {
+            tokens = incr_tokens(tokens, INSERT_DEFINITION, curr_val);
+        }
+    } else if (ch == ' ') {
+        if (tokens->type == INSERT_DEFINITION && strlen(curr_val) > 0) {
+            tokens = incr_tokens(tokens, INTO, curr_val);
+        } else if (tokens->type == INTO && strlen(curr_val) > 0) {
+            tokens = incr_tokens(tokens, TABLE_NAME, curr_val);
+        } else if (tokens->type == TABLE_NAME && strlen(curr_val) > 0) {
+            tokens = incr_tokens(tokens, INSERT_VALUES, curr_val);
+        }
+    }
+
+    return tokens;
+}
+
 static struct Token* parse_state_create(struct Token* tokens, const char ch, char* curr_val, enum ParserState* state) {
     if (ch == ';') {
         *state = PS_NONE;
         if (tokens->type == COLUMN_NAME && curr_val[strlen(curr_val)-1] == ')') {
             tokens = incr_tokens(tokens, CREATE_DEFINITION, curr_val);
+        } else if (tokens->type == CREATE_TYPE_DATABASE || tokens->type == IN) {
+            tokens = incr_tokens(tokens, DATABASE_NAME, curr_val);
         }
     } else if (ch == ' ') {
         if (tokens->type == CREATE_COMMAND) {
@@ -145,11 +187,17 @@ static struct Token* parse_state_create(struct Token* tokens, const char ch, cha
         } else if (tokens->type == COLUMN_DATA_TYPE) {
             tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
         } else if (tokens->type == COLUMN_NAME && strcmp(curr_val, ",") == 0) {
-            tokens = incr_tokens(tokens, COLUMN_SEPERATOR, curr_val);
+            tokens = incr_tokens(tokens, SEPERATOR, curr_val);
         } else if (tokens->type == COLUMN_NAME && curr_val[strlen(curr_val)-1] == ')') {
             tokens = incr_tokens(tokens, CREATE_DEFINITION, curr_val);
-        } else if (tokens->type == COLUMN_SEPERATOR) {
+        } else if (tokens->type == SEPERATOR) {
             tokens = incr_tokens(tokens, COLUMN_DATA_TYPE, curr_val);
+        } else if (tokens->type == SCHEMA_NAME) {
+            if (strcmp(curr_val, "IN") == 0) {
+                tokens = incr_tokens(tokens, IN, curr_val);
+            }
+        } else if (tokens->type == IN) {
+            tokens = incr_tokens(tokens, DATABASE_NAME, curr_val);
         }
     } else if (ch == ',' && tokens->type == COLUMN_DATA_TYPE) {
         tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
@@ -222,8 +270,11 @@ struct Token* parse_to_tokens(FILE *file, const size_t file_size) {
             case PS_USING:
                 tokens = parse_state_using(tokens, ch, curr_val, &curr_state);
                 break;
-            case PS_SUDI:
-                tokens = parse_state_sudi(tokens, ch, curr_val, &curr_state);
+            case PS_SUD:
+                tokens = parse_state_sud(tokens, ch, curr_val, &curr_state);
+                break;
+            case PS_INSERT:
+                tokens = parse_state_insert(tokens, ch, curr_val, &curr_state);
                 break;
             case PS_CREATE:
                 tokens = parse_state_create(tokens, ch, curr_val, &curr_state);

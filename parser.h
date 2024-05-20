@@ -12,7 +12,8 @@ enum ParserState {
     PS_NONE,
     PS_USING,
     PS_CREATE,
-    PS_SUDI, // Select, update, delete, insert TODO might break up
+    PS_SUD, // Select, update, delete TODO might break up
+    PS_INSERT,
     PS_FILTER,
     PS_ORDER,
     PS_GROUP,

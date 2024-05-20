@@ -11,13 +11,18 @@ enum TokenType {
     SELECT_COMMAND, // SELECT
     UPDATE_COMMAND, // UPDATE
     DELETE_COMMAND, // DELETE
-    INSERT_COMMAND, // INSERT INTO
+    INSERT_COMMAND, // INSERT
     CREATE_COMMAND, // CREATE
     CREATE_TYPE_TABLE, // (CREATE) TABLE
     CREATE_TYPE_DATABASE, // (CREATE) DATABASE
     CREATE_TYPE_SCHEMA, // (CREATE) SCHEMA
-    CREATE_DEFINITION, //
+    CREATE_DEFINITION, // ( ...vals )
     IN, // (CREATE TABLE) IN <schema>
+    INTO, // (INSERT) (vals) INTO <table>
+    INSERT_DEFINITION, // ( ...columns )
+    INSERT_VALUES, // VALUES
+    INSERT_VALUES_GROUP, // ( ...vals )
+    INSERT_VALUE, // <VALUES> ('something', 1234), ('else', 111)
     SCHEMA_NAME, // any string
     DATABASE_NAME, // any string
     FROM, // FROM
@@ -25,7 +30,7 @@ enum TokenType {
     TABLE_ALIAS, // any string
     COLUMN_DATA_TYPE, // INT (id), VARCHAR(20) (first_name)
     COLUMN_NAME, // (INT) id, (VARCHAR(20)) first_name
-    COLUMN_SEPERATOR, // ,
+    SEPERATOR, // ,
     PRIMARY_KEY, // PRIMARY KEY
     PRIMARY_KEY_VALUE, // (PRIMARY KEY) (id)
     FOREIGN_KEY, // FOREIGN KEY
