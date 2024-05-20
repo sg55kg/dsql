@@ -133,6 +133,8 @@ static struct Token* parse_state_insert(struct Token* tokens, const char ch, cha
             tokens = incr_tokens(tokens, COLUMN_NAME, curr_val);
         } else if (tokens->prev->type == INSERT_VALUE || tokens->type == INSERT_VALUES_GROUP) {
             tokens = incr_tokens(tokens, INSERT_VALUE, curr_val);
+        } else if (strcmp(curr_val, ")") == 0 && tokens->type == INSERT_VALUE) {
+            tokens = incr_tokens(tokens, INSERT_VALUES_GROUP, curr_val);
         }
     } else if (ch == ')') {
         if (tokens->prev->type == COLUMN_NAME) {
@@ -154,6 +156,8 @@ static struct Token* parse_state_insert(struct Token* tokens, const char ch, cha
         } else if (tokens->type == TABLE_NAME && strlen(curr_val) > 0) {
             tokens = incr_tokens(tokens, INSERT_VALUES, curr_val);
         }
+    } else if (strcmp(curr_val, "(") == 0 && tokens->prev->type == INSERT_VALUES_GROUP) {
+        tokens = incr_tokens(tokens, INSERT_VALUES_GROUP, curr_val);
     }
 
     return tokens;
