@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #include "parser.h"
-#include "token.h"
+#include "backend/parser/token.h"
 
 int main(const int argc, char *argv[]) {
     if (argc < 2) {

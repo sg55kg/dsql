@@ -4,7 +4,11 @@ project(dollar_sql C)
 set(CMAKE_C_STANDARD 11)
 
 add_executable(dollar_sql main.c
-        parser.h
-        token.h
-        token.c
-        parser.c)
+        backend/parser/parser.h
+        backend/parser/token.h
+        backend/parser/token.c
+        backend/parser/parser.c
+        backend/file-manager/file_manager.h
+        backend/file-manager/file_manager.c
+        backend/page-manager/page.h
+)
