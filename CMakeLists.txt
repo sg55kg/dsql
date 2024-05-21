@@ -12,3 +12,9 @@ add_executable(dollar_sql main.c
         backend/file-manager/file_manager.c
         backend/page-manager/page.h
 )
+
+# Test executable source files
+add_executable(FileManagerTests
+        test/backend/file-manager/file-manager-tests.c
+        backend/file-manager/file_manager.c)
+add_executable(ParserTests test/backend/parser/parser-tests.c)
