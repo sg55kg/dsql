@@ -26,6 +26,9 @@ typedef struct Page {
     char data[PAGE_SIZE]; // TODO - does this need to be char?
 } Page;
 
+Page* read_page(uint64_t key);
+void write_page(Page* page);
+
 // page flags
 #define PAGE_HAS_FREE_LINES	0x0001
 #define PAGE_FULL		    0x0002

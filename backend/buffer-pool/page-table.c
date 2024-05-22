@@ -4,6 +4,7 @@
 
 #include "page-table.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <xxhash.h>
 
@@ -13,8 +14,24 @@
 // TODO - implement LRU list
 
 static XXH64_hash_t get_hash(const uint64_t key) {
-    const XXH64_hash_t hash = XXH64(&key, HASH_TABLE_SIZE, 0);
-    return hash;
+    const XXH64_hash_t hash = XXH64(&key, sizeof(key), 0);
+    return hash % HASH_TABLE_SIZE;
+}
+
+PageTableEntry* create_page_table_entry(const uint64_t key) {
+    PageTableEntry* entry = malloc(sizeof(PageTableEntry));
+    if (entry == NULL) {
+        fprintf(stderr, "Error allocating memory for page table entry");
+        return NULL;
+    }
+    entry->page_number = key;
+    entry->clock_next = NULL;
+    entry->next = NULL;
+    entry->prev = NULL;
+    entry->reference_bit = 0;
+    entry->pin_count = 0;
+    entry->is_dirty = 0;
+    return entry;
 }
 
 PageTable* init_page_table() {
@@ -22,17 +39,18 @@ PageTable* init_page_table() {
     for (int i = 0; i < HASH_TABLE_SIZE; i++) {
         table->table[i] = NULL;
     }
-    table->lru_head = NULL;
-    table->lru_tail = NULL;
+    table->clock_hand = NULL;
+    table->size = 0;
     return table;
 }
 
 int has_key(const PageTable* table, const uint64_t key) {
     const XXH64_hash_t hash = get_hash(key);
-    const PageTableEntry* entry = table->table[hash];
+    PageTableEntry* entry = table->table[hash];
 
     while (entry != NULL) {
         if (entry->page_number == key) {
+            entry->reference_bit = 1;
             return KEY_FOUND;
         }
         entry = entry->next;
@@ -47,6 +65,7 @@ PageTableEntry* lookup_key(const PageTable* table, const uint64_t key) {
 
     while (entry != NULL) {
         if (entry->page_number == key) {
+            entry->reference_bit = 1;
             return entry;
         }
         entry = entry->next;
@@ -58,16 +77,17 @@ PageTableEntry* lookup_key(const PageTable* table, const uint64_t key) {
 void insert_page(PageTable* table, const uint64_t key, PageTableEntry* page) {
     const XXH64_hash_t hash = get_hash(key);
     PageTableEntry* existing_entry = table->table[hash];
+    page->reference_bit = 1;
+    page->next = existing_entry;
+    table->table[hash] = page;
 
-    if (existing_entry == NULL) {
-        table->table[hash] = page;
-        return;
+    if (table->clock_hand != NULL) {
+        page->clock_next = table->clock_hand->clock_next;
+        table->clock_hand->clock_next = page;
+    } else {
+        page->clock_next = page;
+        table->clock_hand = page;
     }
 
-    while (existing_entry->next != NULL) {
-        existing_entry = existing_entry->next;
-    }
-
-    page->prev = existing_entry;
-    existing_entry->next = page;
+    table->size++;
 }

@@ -13,20 +13,23 @@ typedef struct PageTableEntry {
     uint64_t page_number;
     int frame_index;
     uint8_t is_dirty;
+    uint8_t reference_bit; // for clock
     uint32_t pin_count;
+    struct PageTableEntry* clock_next;
     struct PageTableEntry* prev;
     struct PageTableEntry* next;
 } PageTableEntry;
 
 typedef struct {
     PageTableEntry* table[HASH_TABLE_SIZE]; // TODO replace with non-static size
-    PageTableEntry* lru_head; // TODO - replace LRU list with a clock system later
-    PageTableEntry* lru_tail;
+    PageTableEntry* clock_hand;
+    uint64_t size;
 } PageTable;
 
-int has_key(PageTable* table, const uint64_t key);
-PageTableEntry* lookup_key(PageTable* table, uint64_t key);
-void insert_page(PageTable* table, uint64_t key, PageTableEntry* page);
+PageTableEntry* create_page_table_entry(const uint64_t key);
+int has_key(const PageTable* table, const uint64_t key);
+PageTableEntry* lookup_key(const PageTable* table, const uint64_t key);
+void insert_page(PageTable* table, const uint64_t key, PageTableEntry* page);
 PageTable* init_page_table();
 
 #endif //PAGE_TABLE_H
