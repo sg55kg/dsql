@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "parser.h"
+#include "backend/parser/parser.h"
 #include "backend/parser/token.h"
 
 int main(const int argc, char *argv[]) {
