@@ -66,13 +66,14 @@ int read_file(const int fd, void* buf, const size_t count) {
         return -1;
     }
 
-    if (read(fd, buf, count) == -1) {
+    const ssize_t bytes_read = read(fd, buf, count);
+    if (bytes_read == -1) {
         perror("Failed to read file.\n");
         close(fd);
         return -1;
     }
 
-    return 0;
+    return bytes_read;
 }
 
 int write_file(const int fd, const void* buf, const size_t count) {

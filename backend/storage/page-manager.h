@@ -5,9 +5,12 @@
 #ifndef PAGE_MANAGER_H
 #define PAGE_MANAGER_H
 
-#include "page.h"
+#include "data-page.h"
+#include "index-page.h"
 
-Page* read_page(uint64_t key);
-void write_page(Page* page);
+DataPage* read_data_page(uint64_t key);
+void write_data_page(DataPage* page);
+IndexPage* read_index_page(uint64_t key);
+void write_index_page(IndexPage* page);
 
 #endif //PAGE_MANAGER_H

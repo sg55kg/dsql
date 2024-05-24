@@ -10,7 +10,7 @@ add_executable(dollar_sql main.c
         backend/parser/parser.c
         backend/storage/file_manager.h
         backend/storage/file_manager.c
-        backend/storage/page.h
+        backend/storage/data-page.h
         backend/buffer-pool/buffer-pool.h
         backend/buffer-pool/page-table.c
         backend/buffer-pool/page-table.h
@@ -18,6 +18,10 @@ add_executable(dollar_sql main.c
         backend/storage/page-manager.c
         backend/buffer-pool/index-tree.c
         backend/buffer-pool/index-tree.h
+        backend/storage/index-page.c
+        backend/storage/index-page.h
+        backend/storage/util.c
+        backend/storage/util.h
 )
 
 # Test executable source files
@@ -32,3 +36,4 @@ add_executable(PageTableTests
 find_package(xxHash CONFIG REQUIRED)
 target_link_libraries(dollar_sql PRIVATE xxHash::xxhash)
 target_link_libraries(PageTableTests PRIVATE xxHash::xxhash)
+add_executable(PageManagerTests test/backend/storage/page-manager-tests.c)

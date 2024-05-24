@@ -12,35 +12,10 @@
 #include <stdlib.h>
 #endif
 
-#include "../../../backend/file-manager/file_manager.h"
+#include "../../../backend/storage/file_manager.h"
+#include "../../../backend/storage/util.h"
 
 #define TEST_PAGE_SIZE 4096 // 4kb
-
-#if _WIN32
-void* allocate_aligned_buffer(const size_t size, const size_t alignment) {
-    return _aligned_malloc(size, alignment);
-}
-
-void free_aligned_buffer(void* buffer) {
-    _aligned_free(buffer);
-}
-
-#else
-
-void* allocate_aligned_buffer(size_t size, size_t alignment) {
-    void* buffer = NULL;
-    if (posix_memalign(&buffer, alignment, size) != 0) {
-        perror("Failed to allocate aligned memory");
-        return NULL;
-    }
-    return buffer;
-}
-
-void free_aligned_buffer(void* buffer) {
-    free(buffer);
-}
-
-#endif
 
 void test_create_file() {
     const char* filename = "testfile.dat";
